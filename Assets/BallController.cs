@@ -7,33 +7,70 @@ public class BallController : MonoBehaviour
 {
     private Camera mainCamera;
     private Rigidbody2D rb;
+    private bool isDragging = false;
+
+    [SerializeField] private SpringJoint2D springJoint;
+    [SerializeField] private GameObject ballPrefab; // Champ sérialisé pour le prefab de la balle
+    [SerializeField] private Transform spawnPoint;  // Point de spawn pour les nouvelles balles
 
     void Start()
     {
         mainCamera = Camera.main;
-        rb = GetComponent<Rigidbody2D>();
-        if (rb == null)
-        {
-            Debug.LogError("No Rigidbody2D component found on this GameObject.");
-        }
+        SpawnNewBall(); // Spawner une nouvelle balle au démarrage
     }
 
     void Update()
     {
-        // Sortir de la méthode s'il n'y a pas de toucher
-        if (Touchscreen.current == null || !Touchscreen.current.primaryTouch.press.isPressed)
+        if (rb == null) return; // Si pas de balle active, ne rien faire
+
+        if (Touchscreen.current == null) return;
+
+        if (Touchscreen.current.primaryTouch.press.isPressed)
         {
-            return;
+            Vector2 touchPosition = Touchscreen.current.primaryTouch.position.ReadValue();
+            Vector3 worldPosition = mainCamera.ScreenToWorldPoint(new Vector3(touchPosition.x, touchPosition.y, mainCamera.nearClipPlane));
+            worldPosition.z = 0;
+
+            if (!isDragging)
+            {
+                isDragging = true;
+                rb.isKinematic = true;
+                rb.velocity = Vector2.zero;
+            }
+
+            rb.MovePosition(worldPosition);
         }
+        else if (isDragging)
+        {
+            isDragging = false;
+            LaunchBall();
+        }
+    }
 
-        // Lire la position du toucher
-        Vector2 touchPosition = Touchscreen.current.primaryTouch.position.ReadValue();
+    void LaunchBall()
+    {
+        rb.isKinematic = false;
+        rb.bodyType = RigidbodyType2D.Dynamic;
+        Invoke("DetachBall", 0.1f); // Détacher la balle après un petit délai
+    }
 
-        // Convertir la position du toucher en position dans le monde
-        Vector3 worldPosition = mainCamera.ScreenToWorldPoint(new Vector3(touchPosition.x, touchPosition.y, mainCamera.nearClipPlane));
-        worldPosition.z = 0; // S'assurer que la position z est 0 pour 2D
+    void DetachBall()
+    {
+        springJoint.enabled = false;
+        springJoint.connectedBody = null;
+        rb = null;
+        springJoint = null;
+        SpawnNewBall(); // Spawner une nouvelle balle après avoir détaché l'ancienne
+    }
 
-        // Déplacer la balle à la position du toucher
-        rb.MovePosition(worldPosition);
+    void SpawnNewBall()
+    {
+        GameObject newBall = Instantiate(ballPrefab, spawnPoint.position, Quaternion.identity);
+        rb = newBall.GetComponent<Rigidbody2D>();
+        springJoint = newBall.GetComponent<SpringJoint2D>();
+        if (rb == null || springJoint == null)
+        {
+            Debug.LogError("The instantiated ball does not have the required components.");
+        }
     }
 }
