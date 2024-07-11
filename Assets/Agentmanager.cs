@@ -12,25 +12,21 @@ public class Agentmanager : MonoBehaviour
     public float changeSpeed = 10f;
     private static float timer = 0.0f;
 
-    // Start is called before the first frame update
     void Start()
     {
-        if (square != null)
-        {
-            square.transform.localScale = new Vector3(2.0f, 0.5f, 0.5f);
-        }
-        else
-        {
-            Debug.LogError("Square is not assigned in the Inspector.");
-        }
+        // Initialize squares
+        InitializeSquare(square);
+        InitializeSquare(square1);
+        InitializeSquare(square2);
+        InitializeSquare(square3);
+        InitializeSquare(square4);
     }
 
-    // Update is called once per frame
     void Update()
     {
         if (square != null)
         {
-            Rotate(square, changeSpeed * 5);
+            // Rotate(square, changeSpeed * 5); // Uncomment if rotation is needed
         }
         if (square1 != null)
         {
@@ -44,24 +40,28 @@ public class Agentmanager : MonoBehaviour
                 Debug.LogError("SpriteRenderer component is missing on square1.");
             }
         }
-        if (square2 != null)
+    }
+
+    void InitializeSquare(GameObject square)
+    {
+        if (square != null)
         {
-            Rigidbody2D rb = square2.GetComponent<Rigidbody2D>();
+            square.transform.localScale = new Vector3(2.0f, 0.5f, 0.5f);
+            Rigidbody2D rb = square.GetComponent<Rigidbody2D>();
             if (rb != null)
             {
-                PushUp(rb, 1);
+                rb.gravityScale = 0f; // Disable gravity by default
+                rb.isKinematic = true; // Make the square kinematic initially
             }
             else
             {
-                Debug.LogError("Rigidbody2D component is missing on square2.");
+                Debug.LogError("Rigidbody2D component is missing on square.");
             }
         }
-    }
-
-    // Rotate on Z axis by a given speed
-    void Rotate(GameObject go, float speed)
-    {
-        go.transform.localRotation = Quaternion.Euler(0, 0, go.transform.localEulerAngles.z + speed * Time.deltaTime);
+        else
+        {
+            Debug.LogError("Square is not assigned in the Inspector.");
+        }
     }
 
     // Return a new color interpolating R(sin) and B(cos) channels by a given speed
@@ -71,16 +71,16 @@ public class Agentmanager : MonoBehaviour
         return new Color(Mathf.Sin(timer), Mathf.Cos(timer), 1, 1);
     }
 
-    // Add a vertical force to the Rigidbody
-    void PushUp(Rigidbody2D rb, float force)
+    void OnCollisionEnter2D(Collision2D collision)
     {
-        if (rb != null)
+        if (collision.gameObject.CompareTag("Ball"))
         {
-            rb.AddForce(new Vector2(0, force));
-        }
-        else
-        {
-            Debug.LogError("No Rigidbody2D detected");
+            Rigidbody2D rb = collision.collider.GetComponent<Rigidbody2D>();
+            if (rb != null)
+            {
+                rb.gravityScale = 1f; // Enable gravity
+                rb.isKinematic = false; // Make the square dynamic
+            }
         }
     }
 }

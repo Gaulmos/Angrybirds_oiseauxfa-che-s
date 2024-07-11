@@ -6,71 +6,117 @@ using UnityEngine.InputSystem;
 public class BallController : MonoBehaviour
 {
     private Camera mainCamera;
-    private Rigidbody2D rb;
+    private Rigidbody2D birdRigidbody;
     private bool isDragging = false;
 
-    [SerializeField] private SpringJoint2D springJoint;
-    [SerializeField] private GameObject ballPrefab; // Champ sérialisé pour le prefab de la balle
-    [SerializeField] private Transform spawnPoint;  // Point de spawn pour les nouvelles balles
+    [SerializeField] private GameObject birdPrefab; // Prefab de l'oiseau
+    [SerializeField] private Rigidbody2D pivotRigidbody;
+    [SerializeField] private float detachDelay = 0.20f;
+    [SerializeField] private float respawnDelay = 6.0f;
+
+    private GameObject currentBird;
+    // private Rigidbody2D birdRigidbody;
+    private SpringJoint2D birdSpringJoint;
+    // private bool isSpawningNewBird = false; // Indique si un nouveau bird est en cours de création
 
     void Start()
     {
         mainCamera = Camera.main;
-        SpawnNewBall(); // Spawner une nouvelle balle au démarrage
+        // SpawnNewBird(); // Appel initial pour spawner un bird au démarrage
     }
 
     void Update()
     {
-        if (rb == null) return; // Si pas de balle active, ne rien faire
+       if (!Touchscreen.current.primaryTouch.press.IsPressed())
 
-        if (Touchscreen.current == null) return;
-
-        if (Touchscreen.current.primaryTouch.press.isPressed)
         {
-            Vector2 touchPosition = Touchscreen.current.primaryTouch.position.ReadValue();
-            Vector3 worldPosition = mainCamera.ScreenToWorldPoint(new Vector3(touchPosition.x, touchPosition.y, mainCamera.nearClipPlane));
-            worldPosition.z = 0;
 
-            if (!isDragging)
+            if(isDragging)
             {
-                isDragging = true;
-                rb.isKinematic = true;
-                rb.velocity = Vector2.zero;
+                LaunchBird();
+                Invoke(nameof(SpawnNewBird), respawnDelay);
+                isDragging = false;
             }
 
-            rb.MovePosition(worldPosition);
+            return;
+
+
+
         }
-        else if (isDragging)
+        isDragging = true;
+
+        Vector2 touchPosition = Touchscreen.current.primaryTouch.position.ReadValue();
+        Vector3 worldPosition = mainCamera.ScreenToWorldPoint(touchPosition);
+        birdRigidbody.isKinematic = true;
+        birdRigidbody.position = worldPosition;
+
+    }
+
+    private void LaunchBird()
+    {
+        if (birdRigidbody != null)
         {
-            isDragging = false;
-            LaunchBall();
+             birdRigidbody.isKinematic = false;
+        // birdRigidbody.bodyType = RigidbodyType2D.Dynamic;
+        Invoke(nameof(DetachBird), detachDelay); // Détacher le bird après un petit délai
         }
+       
     }
 
-    void LaunchBall()
+    private void DetachBird()
     {
-        rb.isKinematic = false;
-        rb.bodyType = RigidbodyType2D.Dynamic;
-        Invoke("DetachBall", 0.1f); // Détacher la balle après un petit délai
-    }
-
-    void DetachBall()
-    {
-        springJoint.enabled = false;
-        springJoint.connectedBody = null;
-        rb = null;
-        springJoint = null;
-        SpawnNewBall(); // Spawner une nouvelle balle après avoir détaché l'ancienne
-    }
-
-    void SpawnNewBall()
-    {
-        GameObject newBall = Instantiate(ballPrefab, spawnPoint.position, Quaternion.identity);
-        rb = newBall.GetComponent<Rigidbody2D>();
-        springJoint = newBall.GetComponent<SpringJoint2D>();
-        if (rb == null || springJoint == null)
+        if (birdSpringJoint != null)
         {
-            Debug.LogError("The instantiated ball does not have the required components.");
+            birdSpringJoint.enabled = false;
+            birdSpringJoint = null;
+ 
+        }
+
+    }
+
+    private void SpawnNewBird()
+    {
+        if (birdPrefab != null)
+        {
+            if (currentBird != null)
+            {
+                Destroy(currentBird); // Détruire le bird existant s'il y en a un
+            }
+
+            // Instancier un nouveau bird à la position du pivotRigidbody
+            currentBird = Instantiate(birdPrefab, pivotRigidbody.transform);
+            birdRigidbody = currentBird.GetComponent<Rigidbody2D>();
+            birdSpringJoint = currentBird.GetComponent<SpringJoint2D>();
+            birdSpringJoint.connectedBody = pivotRigidbody;
+
+            if (birdRigidbody == null)
+            {
+                Debug.LogError("The instantiated bird does not have a Rigidbody2D component.");
+                return;
+            }
+
+            if (birdSpringJoint == null)
+            {
+                Debug.LogError("The instantiated bird does not have a SpringJoint2D component.");
+                return;
+            }
+
+            birdSpringJoint.connectedBody = pivotRigidbody;
+            birdSpringJoint.enabled = true;
+            birdRigidbody = birdRigidbody;
+        }
+        else
+        {
+            Debug.LogError("Bird prefab is not assigned.");
         }
     }
+
+    // IEnumerator SpawnNewBirdCoroutine(float delay)
+    // {
+    //     Debug.Log("Spawning new bird after delay: " + delay);
+    //     yield return new WaitForSeconds(delay);
+    //     SpawnNewBird(); // Appeler SpawnNewBird après le délai
+    //     // isSpawningNewBird = false; // Réinitialiser le flag après que le bird soit spawner
+    //     Debug.Log("New bird spawned and isSpawningNewBird reset.");
+    // }
 }
