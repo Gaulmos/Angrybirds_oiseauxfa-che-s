@@ -57,6 +57,9 @@ public class Agentmanager : MonoBehaviour
             {
                 Debug.LogError("Rigidbody2D component is missing on square.");
             }
+            // Add a BoxCollider2D component to the square
+            BoxCollider2D collider = square.AddComponent<BoxCollider2D>();
+            collider.isTrigger = true; // Set the collider as a trigger
         }
         else
         {
@@ -73,9 +76,9 @@ public class Agentmanager : MonoBehaviour
 
     void OnCollisionEnter2D(Collision2D collision)
     {
-        if (collision.gameObject.CompareTag("Ball"))
+        if (collision.gameObject.CompareTag("Bird"))
         {
-            Rigidbody2D rb = collision.collider.GetComponent<Rigidbody2D>();
+            Rigidbody2D rb = collision.collider.attachedRigidbody;
             if (rb != null)
             {
                 rb.gravityScale = 1f; // Enable gravity
