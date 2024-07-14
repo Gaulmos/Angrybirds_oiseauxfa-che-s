@@ -25,32 +25,44 @@ public class BallController : MonoBehaviour
         // SpawnNewBird(); // Appel initial pour spawner un bird au démarrage
     }
 
-    void Update()
+   void Update()
+{
+    // Vérifier si Touchscreen.current est null avant d'y accéder
+    if (Touchscreen.current != null)
     {
-       if (!Touchscreen.current.primaryTouch.press.IsPressed())
-
+        // Vérifier si Touchscreen.current.primaryTouch est null avant d'y accéder
+        if (Touchscreen.current.primaryTouch != null)
         {
-
-            if(isDragging)
+            // Vérifier si Touchscreen.current.primaryTouch.press est null avant d'y accéder
+            if (Touchscreen.current.primaryTouch.press != null)
             {
-                LaunchBird();
-                Invoke(nameof(SpawnNewBird), respawnDelay);
-                isDragging = false;
+                if (!Touchscreen.current.primaryTouch.press.IsPressed())
+                {
+                    if(isDragging)
+                    {
+                        LaunchBird();
+                        Invoke(nameof(SpawnNewBird), respawnDelay);
+                        isDragging = false;
+                    }
+                    return;
+                }
+                isDragging = true;
+
+                Vector2 touchPosition = Touchscreen.current.primaryTouch.position.ReadValue();
+                Vector3 worldPosition = mainCamera.ScreenToWorldPoint(touchPosition);
+
+                // Vérifier si birdRigidbody est null avant d'y accéder
+                if (birdRigidbody != null)
+                {
+                    birdRigidbody.isKinematic = true;
+                    birdRigidbody.position = worldPosition;
+                }
             }
-
-            return;
-
-
-
         }
-        isDragging = true;
-
-        Vector2 touchPosition = Touchscreen.current.primaryTouch.position.ReadValue();
-        Vector3 worldPosition = mainCamera.ScreenToWorldPoint(touchPosition);
-        birdRigidbody.isKinematic = true;
-        birdRigidbody.position = worldPosition;
-
     }
+}
+
+
 
     private void LaunchBird()
     {
@@ -75,41 +87,50 @@ public class BallController : MonoBehaviour
     }
 
     private void SpawnNewBird()
+{
+    if (birdPrefab != null)
     {
-        if (birdPrefab != null)
+        if (currentBird != null)
         {
-            if (currentBird != null)
-            {
-                Destroy(currentBird); // Détruire le bird existant s'il y en a un
-            }
-
-            // Instancier un nouveau bird à la position du pivotRigidbody
-            currentBird = Instantiate(birdPrefab, pivotRigidbody.transform);
-            birdRigidbody = currentBird.GetComponent<Rigidbody2D>();
-            birdSpringJoint = currentBird.GetComponent<SpringJoint2D>();
-            birdSpringJoint.connectedBody = pivotRigidbody;
-
-            if (birdRigidbody == null)
-            {
-                Debug.LogError("The instantiated bird does not have a Rigidbody2D component.");
-                return;
-            }
-
-            if (birdSpringJoint == null)
-            {
-                Debug.LogError("The instantiated bird does not have a SpringJoint2D component.");
-                return;
-            }
-
-            birdSpringJoint.connectedBody = pivotRigidbody;
-            birdSpringJoint.enabled = true;
-            birdRigidbody = birdRigidbody;
+            Destroy(currentBird); // Détruire le bird existant s'il y en a un
         }
-        else
+
+        // Instancier un nouveau bird à la position du pivotRigidbody
+        currentBird = Instantiate(birdPrefab, pivotRigidbody.transform);
+        birdRigidbody = currentBird.GetComponent<Rigidbody2D>();
+        if (birdRigidbody == null)
         {
-            Debug.LogError("Bird prefab is not assigned.");
+            Debug.LogError("birdRigidbody is null!");
+            return;
         }
+        birdSpringJoint = currentBird.GetComponent<SpringJoint2D>();
+        birdSpringJoint.connectedBody = pivotRigidbody;
     }
+}
+
+}
+
+    //         if (birdRigidbody == null)
+    //         {
+    //             Debug.LogError("The instantiated bird does not have a Rigidbody2D component.");
+    //             return;
+    //         }
+
+    //         if (birdSpringJoint == null)
+    //         {
+    //             Debug.LogError("The instantiated bird does not have a SpringJoint2D component.");
+    //             return;
+    //         }
+
+    //         birdSpringJoint.connectedBody = pivotRigidbody;
+    //         birdSpringJoint.enabled = true;
+    //         birdRigidbody = birdRigidbody;
+    //     }
+    //     else
+    //     {
+    //         Debug.LogError("Bird prefab is not assigned.");
+    //     }
+    // }
 
     // IEnumerator SpawnNewBirdCoroutine(float delay)
     // {
@@ -119,4 +140,4 @@ public class BallController : MonoBehaviour
     //     // isSpawningNewBird = false; // Réinitialiser le flag après que le bird soit spawner
     //     Debug.Log("New bird spawned and isSpawningNewBird reset.");
     // }
-}
+// }
